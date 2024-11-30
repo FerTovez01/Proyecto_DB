@@ -7,12 +7,11 @@ class MemorySimulator:
         self.total_memory = total_memory
         self.page_size = page_size
         self.num_pages = total_memory // page_size  # Calcular número de páginas
-        self.fixed_partitions = [None] * total_memory
-        self.dynamic_partitions = []
+        self.fixed_partitions = [None] * (self.total_memory // page_size)  # Inicializa la memoria fija
+        self.dynamic_partitions = [{'start': 0, 'size': total_memory, 'status': 'free', 'process_id': None}]  # Inicializa una partición dinámica
         self.virtual_memory = [None] * self.num_pages
         self.page_table = {}
         self.use_bits = []
-
 
     def fixed_partitioning(self, partition_size):
         """Inicializa las particiones fijas."""
@@ -34,28 +33,54 @@ class MemorySimulator:
         return "No hay particiones disponibles."
 
     def dynamic_partitioning(self):
-        """Inicializa la memoria dinámica."""
-        self.dynamic_partitions = [None] * self.total_memory
+        """ Inicializa la memoria dinámica con particiones libres. """
+        # Aquí se puede inicializar la memoria dinámica con particiones de tamaño flexible
+        self.dynamic_partitions = [{'start': 0, 'size': self.total_memory, 'status': 'free', 'process_id': None}]
 
     def add_process_dynamic(self, process_id, process_size):
-        """Agrega un proceso a la memoria dinámica."""
-        for i in range(self.total_memory - process_size + 1):
-            if all(self.dynamic_partitions[i + j] is None for j in range(process_size)):
-                for j in range(process_size):
-                    self.dynamic_partitions[i + j] = process_id
-                return f"Proceso {process_id} agregado exitosamente en memoria dinámica."
-        return f"No hay suficiente espacio para el proceso {process_id}."
+        """ Asigna un proceso a una partición dinámica. """
+        for partition in self.dynamic_partitions:
+            if partition['status'] == 'free' and partition['size'] >= process_size:
+                # Asignar el proceso a esta partición
+                internal_frag = partition['size'] - process_size  # Fragmentación interna
+                partition['status'] = 'occupied'
+                partition['process_id'] = process_id
+                
+                # Si hay fragmentación interna, dividir la partición
+                if internal_frag > 0:
+                    # Crear una nueva partición libre después del proceso
+                    new_partition = {'start': partition['start'] + process_size, 
+                                     'size': internal_frag, 
+                                     'status': 'free', 
+                                     'process_id': None}
+                    self.dynamic_partitions.append(new_partition)
+                
+                print(f"Proceso {process_id} agregado al bloque de memoria con {internal_frag} bytes de fragmentación interna.")
+                return f"Proceso {process_id} agregado al bloque de memoria con {internal_frag} bytes de fragmentación interna."
+        return "No hay suficiente espacio para el proceso."
+
+    def display_memory(self):
+        """ Muestra el estado de la memoria dinámica. """
+        return "\n".join([f"Partición desde {partition['start']} bytes, tamaño: {partition['size']} bytes, Estado: {'Libre' if partition['status'] == 'free' else 'Ocupado'}, Proceso: {partition['process_id'] if partition['process_id'] else 'N/A'}" 
+                          for partition in self.dynamic_partitions])
 
     def compact_memory(self):
-        """Compacta la memoria dinámica, moviendo los procesos."""
-        compacted_memory = [None] * self.total_memory
-        current_index = 0
-        for i in range(self.total_memory):
-            if self.dynamic_partitions[i] is not None:
-                compacted_memory[current_index] = self.dynamic_partitions[i]
-                current_index += 1
+        """ Compacta la memoria dinámica, moviendo los procesos. """
+        free_partitions = [partition for partition in self.dynamic_partitions if partition['status'] == 'free']
+        occupied_partitions = [partition for partition in self.dynamic_partitions if partition['status'] == 'occupied']
+        
+        # Compactar: Mover las particiones ocupadas al inicio de la memoria
+        compacted_memory = occupied_partitions + free_partitions
         self.dynamic_partitions = compacted_memory
+
+        # Ajustar las posiciones de las particiones ocupadas
+        current_start = 0
+        for partition in self.dynamic_partitions:
+            partition['start'] = current_start
+            current_start += partition['size']
+
         return "Memoria dinámica compactada exitosamente."
+
 
     def paging(self, process_id, process_size, page_size):
         """Simula la paginación del proceso."""

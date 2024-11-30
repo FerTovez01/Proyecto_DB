@@ -121,7 +121,17 @@ def draw_memory():
         memory_canvas.create_rectangle(450, current_y, 700, current_y + block_height, fill=color, outline="black")
         memory_canvas.create_text(575, current_y + block_height / 2, text=f"Página {i + 1}: {page}", fill="white")
         current_y += block_height + 10
-
+        
+       # Memoria dinámica
+    current_y = 20
+    memory_canvas.create_text(575, 10, text="Memoria Dinámica", fill="white")
+    for partition in simulator.dynamic_partitions:  # Iterar sobre las particiones dinámicas
+        color = "green" if partition['status'] == 'free' else "red"
+        memory_canvas.create_rectangle(450, current_y, 700, current_y + block_height, fill=color, outline="black")
+        memory_canvas.create_text(575, current_y + block_height / 2,
+                                  text=f"Bloque {partition['start']} - Tamaño {partition['size']}: {'Libre' if partition['status'] == 'free' else partition['process_id']}",
+                                  fill="white")
+        current_y += block_height + 10
 
     def add_process_fixed(self, process_id, process_size):
         # Lógica para agregar un proceso fijo (ejemplo)
@@ -236,5 +246,3 @@ memory_label = tk.Label(root, text="", fg="white", bg="black", font=("Helvetica"
 memory_label.pack(pady=10)
 
 root.mainloop()
-
-
